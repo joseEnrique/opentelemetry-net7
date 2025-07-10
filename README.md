@@ -140,13 +140,13 @@ kubectl apply -f k8s/ingress.yaml
 
 ### ServiceA
 - `OTEL_SERVICE_NAME`: Service name for OpenTelemetry (default: "ServiceA")
-- `OTEL_EXPORTER_JAEGER_ENDPOINT`: Jaeger endpoint (default: "http://jaeger-collector.observability.svc.cluster.local:14268/api/traces")
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: OpenTelemetry Collector endpoint (default: "http://localhost:4318")
 - `ALLOWED_ORIGINS`: Allowed origins for CORS (default: "*")
 - `SERVICEB_URL`: ServiceB URL (default: "http://localhost:5001")
 
 ### ServiceB
 - `OTEL_SERVICE_NAME`: Service name for OpenTelemetry (default: "ServiceB")
-- `OTEL_EXPORTER_JAEGER_ENDPOINT`: Jaeger endpoint (default: "http://jaeger-collector.observability.svc.cluster.local:14268/api/traces")
+- `OTEL_EXPORTER_OTLP_ENDPOINT`: OpenTelemetry Collector endpoint (default: "http://localhost:4318")
 - `ALLOWED_ORIGINS`: Allowed origins for CORS (default: "*")
 - `SERVICEA_URL`: ServiceA URL (default: "http://localhost:5000")
 - `MONGO_CONNECTION`: MongoDB connection string (default: "mongodb://localhost:27017")
@@ -188,7 +188,7 @@ DOCKER_REGISTRY=your-registry.com DOCKER_TAG=v1.0.0 make docker-buildx
 
 ## Features
 
-✅ **OpenTelemetry**: Complete instrumentation with Jaeger export  
+✅ **OpenTelemetry**: Complete instrumentation with OTLP export to OpenTelemetry Collector  
 ✅ **CORS**: Configured to allow specific origins  
 ✅ **Health Checks**: `/health` endpoints for readiness and liveness probes  
 ✅ **MongoDB**: Integration with MongoDB.Driver  
@@ -251,9 +251,24 @@ Both services maintain their own responsibilities:
 
 This architecture enables more complex and realistic communication patterns in a microservices environment, where services can act as both API providers and consumers.
 
-## Jaeger UI Access
+## Observability Access
 
-To access Jaeger interface and visualize traces:
+### OpenTelemetry Collector
+Your traces are now sent to your OpenTelemetry Collector at:
+- **Service**: `otel-collector-opentelemetry-collector.observability.svc.cluster.local:4318`
+- **Protocol**: OTLP HTTP
+
+To check the collector status:
+```bash
+# Check collector pods
+kubectl get pods -n observability | grep otel-collector
+
+# Check collector logs
+kubectl logs -n observability -l app.kubernetes.io/name=opentelemetry-collector
+```
+
+### Jaeger UI Access (if configured in your collector)
+If your OpenTelemetry Collector forwards traces to Jaeger:
 
 ```bash
 # Port-forward to access Jaeger UI from localhost
@@ -263,7 +278,7 @@ kubectl port-forward -n observability svc/jaeger-query 16686:16686
 open http://localhost:16686
 ```
 
-In Jaeger UI you can see:
+In the observability UI you can see:
 - 🔍 **Distributed traces** between ServiceA ↔ ServiceB
 - 📊 **Latency metrics** from HTTP calls
 - 🌐 **Service maps** showing microservices communication
@@ -285,9 +300,10 @@ In Jaeger UI you can see:
 - **Check logs**: `kubectl logs -n microservices-demo deployment/servicea`
 - **Check resources**: `kubectl describe pod -n microservices-demo`
 
-### Jaeger not receiving traces
-- **Check connectivity**: Endpoint should be `jaeger-collector.observability.svc.cluster.local:14268`
+### OpenTelemetry Collector not receiving traces
+- **Check connectivity**: Endpoint should be `otel-collector-opentelemetry-collector.observability.svc.cluster.local:4318`
 - **Check service logs**: Look for OpenTelemetry errors
+- **Verify collector**: Check if OpenTelemetry Collector is running: `kubectl get pods -n observability | grep otel-collector`
 
 ### MongoDB connection failed
 - **Check MongoDB is running**: `kubectl get pods -n microservices-demo`

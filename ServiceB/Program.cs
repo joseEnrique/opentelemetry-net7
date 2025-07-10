@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Variables de entorno
 var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "ServiceB";
-var jaegerEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_JAEGER_ENDPOINT") ?? "http://localhost:14268/api/traces";
+var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4318";
 var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*";
 var serviceAUrl = Environment.GetEnvironmentVariable("SERVICEA_URL") ?? "http://localhost:5000";
 var mongoConnection = Environment.GetEnvironmentVariable("MONGO_CONNECTION") ?? "mongodb://localhost:27017";
@@ -22,9 +22,9 @@ builder.Services.AddOpenTelemetry()
                 .AddService(serviceName: serviceName, serviceVersion: "1.0.0"))
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
-            .AddJaegerExporter(jaegerOptions =>
+            .AddOtlpExporter(otlpOptions =>
             {
-                jaegerOptions.Endpoint = new Uri(jaegerEndpoint);
+                otlpOptions.Endpoint = new Uri(otlpEndpoint);
             }));
 
 // Configurar CORS

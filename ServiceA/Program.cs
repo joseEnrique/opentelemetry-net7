@@ -5,12 +5,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Variables de entorno
 var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "ServiceA";
-var jaegerEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_JAEGER_ENDPOINT") ?? "http://localhost:14268/api/traces";
+var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4318";
 var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*";
 var serviceBUrl = Environment.GetEnvironmentVariable("SERVICEB_URL") ?? "http://localhost:5001";
 
-// Configurar OpenTelemetry
 builder.Services.AddOpenTelemetry()
+// Configurar OpenTelemetry
     .WithTracing(tracerProviderBuilder =>
         tracerProviderBuilder
             .AddSource(serviceName)
@@ -18,9 +18,9 @@ builder.Services.AddOpenTelemetry()
                 .AddService(serviceName: serviceName, serviceVersion: "1.0.0"))
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
-            .AddJaegerExporter(jaegerOptions =>
+            .AddOtlpExporter(otlpOptions =>
             {
-                jaegerOptions.Endpoint = new Uri(jaegerEndpoint);
+                otlpOptions.Endpoint = new Uri(otlpEndpoint);
             }));
 
 // Configurar CORS

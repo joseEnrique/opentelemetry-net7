@@ -26,8 +26,8 @@ spec:
           value: "http://+:80"
         - name: OTEL_SERVICE_NAME
           value: "ServiceA"
-        - name: OTEL_EXPORTER_JAEGER_ENDPOINT
-          value: "http://jaeger-collector.observability.svc.cluster.local:14268/api/traces"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://otel-collector-opentelemetry-collector.observability.svc.cluster.local:4318"
         - name: ALLOWED_ORIGINS
           value: "*"
         - name: SERVICEB_URL
