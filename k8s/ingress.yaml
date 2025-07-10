@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: microservices-ingress
+  namespace: microservices-demo
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: microservices.local
+    http:
+      paths:
+      - path: /a(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: servicea
+            port:
+              number: 80
+      - path: /b(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: serviceb
+            port:
+              number: 80 

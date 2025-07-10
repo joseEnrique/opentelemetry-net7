@@ -1,0 +1,12 @@
+   helm upgrade --install jaeger jaegertracing/jaeger \
+     --namespace observability \
+     --history-max 3 \
+     --values jaeger.yaml
+
+
+
+   helm install otel-collector open-telemetry/opentelemetry-collector \
+     --namespace observability \
+     --create-namespace \
+     --values otel.yaml \
+     --set image.repository="otel/opentelemetry-collector-k8s"

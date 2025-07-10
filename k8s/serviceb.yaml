@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: serviceb
+  namespace: microservices-demo
+  labels:
+    app: serviceb
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: serviceb
+  template:
+    metadata:
+      labels:
+        app: serviceb
+    spec:
+      containers:
+      - name: serviceb
+        image: quixpublic.azurecr.io/serviceb:new
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        env:
+        - name: ASPNETCORE_URLS
+          value: "http://+:80"
+        - name: OTEL_SERVICE_NAME
+          value: "ServiceB"
+        - name: OTEL_EXPORTER_JAEGER_ENDPOINT
+          value: "http://jaeger-collector.observability.svc.cluster.local:14268/api/traces"
+        - name: ALLOWED_ORIGINS
+          value: "*"
+        - name: SERVICEA_URL
+          value: "http://servicea.microservices-demo.svc.cluster.local"
+        - name: MONGO_CONNECTION
+          value: "mongodb://mongo.microservices-demo.svc.cluster.local:27017"
+        - name: MONGO_DATABASE
+          value: "testdb"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: serviceb
+  namespace: microservices-demo
+  labels:
+    app: serviceb
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: serviceb 
