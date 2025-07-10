@@ -1,203 +1,203 @@
-# Microservicios .NET 7 con OpenTelemetry y MongoDB
+# .NET 7 Microservices with OpenTelemetry and MongoDB
 
-Este proyecto contiene un escenario completo de microservicios en .NET 7 con instrumentación OpenTelemetry y base de datos MongoDB.
+This project contains a complete .NET 7 microservices scenario with OpenTelemetry instrumentation and MongoDB database.
 
-## Estructura del Proyecto
+## Project Structure
 
 ```
-├── ServiceA/                 # Servicio A - API simple
+├── ServiceA/                 # Service A - Simple API
 │   ├── Program.cs
 │   ├── ServiceA.csproj
 │   └── Dockerfile
-├── ServiceB/                 # Servicio B - API con MongoDB
+├── ServiceB/                 # Service B - API with MongoDB
 │   ├── Models/
 │   │   └── Item.cs
 │   ├── Program.cs
 │   ├── ServiceB.csproj
 │   └── Dockerfile
-├── k8s/                     # Manifiestos de Kubernetes
+├── k8s/                     # Kubernetes Manifests
 │   ├── namespace.yaml
 │   ├── mongodb.yaml
 │   ├── servicea.yaml
 │   ├── serviceb.yaml
 │   └── ingress.yaml
-└── helms/                   # Configuración OpenTelemetry
+└── helms/                   # OpenTelemetry Configuration
     └── otel.yaml
 ```
 
-## Servicios
+## Services
 
 ### ServiceA
 - **Endpoints**:
-  - `GET /api/values` - Devuelve una lista estática de strings
-  - `GET /api/items-from-b` - Consulta ServiceB para obtener items de MongoDB
+  - `GET /api/values` - Returns a static list of strings
+  - `GET /api/items-from-b` - Queries ServiceB to get items from MongoDB
 - **Health Check**: `GET /health`
-- **Puerto**: 80
+- **Port**: 80
 
 ### ServiceB  
 - **Endpoints**:
-  - `GET /api/values-from-a` - Consulta ServiceA vía HTTP
-  - `GET /api/items` - Lee documentos de MongoDB colección "items"
+  - `GET /api/values-from-a` - Queries ServiceA via HTTP
+  - `GET /api/items` - Reads documents from MongoDB "items" collection
 - **Health Check**: `GET /health`
-- **Puerto**: 80
+- **Port**: 80
 
-## Construcción de Imágenes Docker
+## Docker Image Building
 
-### ⚠️ IMPORTANTE: Compatibilidad de Arquitectura
+### ⚠️ IMPORTANT: Architecture Compatibility
 
-Los Dockerfiles están optimizados para **multi-plataforma**. Usa siempre `docker buildx` para evitar errores de "exec format error":
+The Dockerfiles are optimized for **multi-platform**. Always use `docker buildx` to avoid "exec format error":
 
 ```bash
-# Verificar arquitectura de tu cluster Kubernetes
+# Check your Kubernetes cluster architecture
 kubectl get nodes -o wide
 
-# Construcción para arquitectura específica (recomendado)
-# Para clusters AMD64 (Intel/AMD - más común en cloud)
+# Build for specific architecture (recommended)
+# For AMD64 clusters (Intel/AMD - most common in cloud)
 docker buildx build --platform linux/amd64 -t servicea:latest ServiceA/ --load
 docker buildx build --platform linux/amd64 -t serviceb:latest ServiceB/ --load
 
-# Para clusters ARM64 (Apple Silicon, algunos clusters)
+# For ARM64 clusters (Apple Silicon, some clusters)
 docker buildx build --platform linux/arm64 -t servicea:latest ServiceA/ --load
 docker buildx build --platform linux/arm64 -t serviceb:latest ServiceB/ --load
 
-# Multi-arquitectura (compatible con cualquier cluster)
+# Multi-architecture (compatible with any cluster)
 docker buildx build --platform linux/amd64,linux/arm64 -t servicea:latest ServiceA/ --push
 docker buildx build --platform linux/amd64,linux/arm64 -t serviceb:latest ServiceB/ --push
 ```
 
-### 🎯 Usando Makefiles (Recomendado)
+### 🎯 Using Makefiles (Recommended)
 
-Cada servicio incluye un **Makefile** optimizado con todos los comandos necesarios:
+Each service includes an optimized **Makefile** with all necessary commands:
 
 ```bash
 # ServiceA
 cd ServiceA
-make help                    # Ver todos los comandos disponibles
-make dev                     # Desarrollo con hot reload en puerto 5000
-make docker-buildx           # Construir imagen multi-plataforma
-make test-api               # Probar todos los endpoints
+make help                    # See all available commands
+make dev                     # Development with hot reload on port 5000
+make docker-buildx           # Build multi-platform image
+make test-api               # Test all endpoints
 
 # ServiceB  
 cd ServiceB
-make help                    # Ver todos los comandos disponibles
-make dev                     # Desarrollo con hot reload en puerto 5001
-make docker-buildx           # Construir imagen multi-plataforma
-make test-full-stack        # Probar stack completo (requiere MongoDB y ServiceA)
+make help                    # See all available commands
+make dev                     # Development with hot reload on port 5001
+make docker-buildx           # Build multi-platform image
+make test-full-stack        # Test complete stack (requires MongoDB and ServiceA)
 ```
 
-### Construcción Tradicional (solo si buildx no está disponible)
+### Traditional Build (only if buildx is not available)
 ```bash
-# Solo para desarrollo local
+# For local development only
 cd ServiceA && docker build -t servicea:latest .
 cd ../ServiceB && docker build -t serviceb:latest .
 ```
 
-## 🔧 Solución a "exec format error"
+## 🔧 Solving "exec format error"
 
-Si obtienes este error en Kubernetes, significa incompatibilidad de arquitectura:
+If you get this error in Kubernetes, it means architecture incompatibility:
 
-1. **Verificar arquitectura del cluster**:
+1. **Check cluster architecture**:
 ```bash
 kubectl describe node | grep "kubernetes.io/arch"
 ```
 
-2. **Reconstruir con la arquitectura correcta**:
+2. **Rebuild with correct architecture**:
 ```bash
-# Eliminar imágenes actuales
+# Remove current images
 docker rmi servicea:latest serviceb:latest
 
-# Reconstruir para la arquitectura de tu cluster
+# Rebuild for your cluster architecture
 docker buildx build --platform linux/amd64 -t servicea:latest ServiceA/ --load
 docker buildx build --platform linux/amd64 -t serviceb:latest ServiceB/ --load
 ```
 
-3. **Re-desplegar**:
+3. **Re-deploy**:
 ```bash
 kubectl delete -f k8s/servicea.yaml k8s/serviceb.yaml
 kubectl apply -f k8s/servicea.yaml k8s/serviceb.yaml
 ```
 
-## Despliegue en Kubernetes
+## Kubernetes Deployment
 
 ```bash
-# Crear namespace
+# Create namespace
 kubectl apply -f k8s/namespace.yaml
 
-# Desplegar MongoDB
+# Deploy MongoDB
 kubectl apply -f k8s/mongodb.yaml
 
-# Desplegar ServiceA
+# Deploy ServiceA
 kubectl apply -f k8s/servicea.yaml
 
-# Desplegar ServiceB
+# Deploy ServiceB
 kubectl apply -f k8s/serviceb.yaml
 
-# (Opcional) Desplegar Ingress
+# (Optional) Deploy Ingress
 kubectl apply -f k8s/ingress.yaml
 ```
 
-## Variables de Entorno
+## Environment Variables
 
 ### ServiceA
-- `OTEL_SERVICE_NAME`: Nombre del servicio para OpenTelemetry (default: "ServiceA")
-- `OTEL_EXPORTER_JAEGER_ENDPOINT`: Endpoint de Jaeger (default: "http://jaeger-collector.observability.svc.cluster.local:14268/api/traces")
-- `ALLOWED_ORIGINS`: Orígenes permitidos para CORS (default: "*")
-- `SERVICEB_URL`: URL de ServiceB (default: "http://localhost:5001")
+- `OTEL_SERVICE_NAME`: Service name for OpenTelemetry (default: "ServiceA")
+- `OTEL_EXPORTER_JAEGER_ENDPOINT`: Jaeger endpoint (default: "http://jaeger-collector.observability.svc.cluster.local:14268/api/traces")
+- `ALLOWED_ORIGINS`: Allowed origins for CORS (default: "*")
+- `SERVICEB_URL`: ServiceB URL (default: "http://localhost:5001")
 
 ### ServiceB
-- `OTEL_SERVICE_NAME`: Nombre del servicio para OpenTelemetry (default: "ServiceB")
-- `OTEL_EXPORTER_JAEGER_ENDPOINT`: Endpoint de Jaeger (default: "http://jaeger-collector.observability.svc.cluster.local:14268/api/traces")
-- `ALLOWED_ORIGINS`: Orígenes permitidos para CORS (default: "*")
-- `SERVICEA_URL`: URL de ServiceA (default: "http://localhost:5000")
-- `MONGO_CONNECTION`: Cadena de conexión a MongoDB (default: "mongodb://localhost:27017")
-- `MONGO_DATABASE`: Nombre de la base de datos MongoDB (default: "testdb")
+- `OTEL_SERVICE_NAME`: Service name for OpenTelemetry (default: "ServiceB")
+- `OTEL_EXPORTER_JAEGER_ENDPOINT`: Jaeger endpoint (default: "http://jaeger-collector.observability.svc.cluster.local:14268/api/traces")
+- `ALLOWED_ORIGINS`: Allowed origins for CORS (default: "*")
+- `SERVICEA_URL`: ServiceA URL (default: "http://localhost:5000")
+- `MONGO_CONNECTION`: MongoDB connection string (default: "mongodb://localhost:27017")
+- `MONGO_DATABASE`: MongoDB database name (default: "testdb")
 
-## 🚀 Flujo de Desarrollo Rápido
+## 🚀 Quick Development Workflow
 
-### Desarrollo Local Completo
+### Complete Local Development
 ```bash
-# 1. Iniciar MongoDB (Docker)
+# 1. Start MongoDB (Docker)
 docker run -d --name mongo -p 27017:27017 mongo:6.0
 
 # 2. Terminal 1: ServiceA
 cd ServiceA
-make dev              # Hot reload en http://localhost:5000
+make dev              # Hot reload at http://localhost:5000
 
 # 3. Terminal 2: ServiceB  
 cd ServiceB
-make dev              # Hot reload en http://localhost:5001
+make dev              # Hot reload at http://localhost:5001
 
-# 4. Probar el stack completo
+# 4. Test the complete stack
 cd ServiceB
-make test-full-stack  # Prueba todos los endpoints e interacciones
+make test-full-stack  # Test all endpoints and interactions
 ```
 
-### Construcción y Despliegue
+### Build and Deployment
 ```bash
-# Construir imágenes multi-plataforma (usa quixpublic.azurecr.io por defecto)
+# Build multi-platform images (uses quixpublic.azurecr.io by default)
 cd ServiceA && make docker-buildx
 cd ../ServiceB && make docker-buildx
 
-# O con registry personalizado
+# Or with custom registry
 DOCKER_REGISTRY=your-registry.com DOCKER_TAG=v1.0.0 make docker-buildx
 
-# Las imágenes se subirán automáticamente a:
+# Images will be automatically pushed to:
 # - quixpublic.azurecr.io/servicea:latest
 # - quixpublic.azurecr.io/serviceb:latest
 ```
 
-## Características
+## Features
 
-✅ **OpenTelemetry**: Instrumentación completa con exportación a Jaeger  
-✅ **CORS**: Configurado para permitir orígenes específicos  
-✅ **Health Checks**: Endpoints `/health` para readiness y liveness probes  
-✅ **MongoDB**: Integración con MongoDB.Driver  
-✅ **Docker**: Imágenes multi-stage optimizadas con soporte **multi-plataforma**  
-✅ **Kubernetes**: Deployments con 3 réplicas, Services y Ingress  
-✅ **Minimal APIs**: Implementación moderna con .NET 7  
-✅ **Makefiles**: Automatización completa de desarrollo y despliegue  
+✅ **OpenTelemetry**: Complete instrumentation with Jaeger export  
+✅ **CORS**: Configured to allow specific origins  
+✅ **Health Checks**: `/health` endpoints for readiness and liveness probes  
+✅ **MongoDB**: Integration with MongoDB.Driver  
+✅ **Docker**: Optimized multi-stage images with **multi-platform** support  
+✅ **Kubernetes**: Deployments with 3 replicas, Services and Ingress  
+✅ **Minimal APIs**: Modern implementation with .NET 7  
+✅ **Makefiles**: Complete automation for development and deployment  
 
-## Pruebas Locales
+## Local Testing
 
 ```bash
 # ServiceA
@@ -211,84 +211,84 @@ curl http://localhost:5001/api/items
 curl http://localhost:5001/health
 ```
 
-## Pruebas en Kubernetes
+## Kubernetes Testing
 
 ```bash
-# Port-forward para acceso local
+# Port-forward for local access
 kubectl port-forward -n microservices-demo svc/servicea 8080:80
 kubectl port-forward -n microservices-demo svc/serviceb 8081:80
 
-# Probar endpoints
+# Test endpoints
 curl http://localhost:8080/api/values
 curl http://localhost:8080/api/items-from-b
 curl http://localhost:8081/api/values-from-a
 curl http://localhost:8081/api/items
 ```
 
-## Acceso vía Ingress
+## Ingress Access
 
-Si se despliega el Ingress, agregar al `/etc/hosts`:
+If Ingress is deployed, add to `/etc/hosts`:
 ```
 127.0.0.1 microservices.local
 ```
 
-Luego acceder a:
+Then access:
 - ServiceA: `http://microservices.local/a/api/values`
 - ServiceA: `http://microservices.local/a/api/items-from-b`
 - ServiceB: `http://microservices.local/b/api/values-from-a`
 - ServiceB: `http://microservices.local/b/api/items`
 
-## Arquitectura de Comunicación
+## Communication Architecture
 
-El escenario ahora implementa **comunicación bidireccional** entre los servicios:
+The scenario now implements **bidirectional communication** between services:
 
-- **ServiceA → ServiceB**: El endpoint `/api/items-from-b` de ServiceA consulta `/api/items` de ServiceB para obtener datos de MongoDB
-- **ServiceB → ServiceA**: El endpoint `/api/values-from-a` de ServiceB consulta `/api/values` de ServiceA para obtener datos estáticos
+- **ServiceA → ServiceB**: ServiceA's `/api/items-from-b` endpoint queries ServiceB's `/api/items` to get MongoDB data
+- **ServiceB → ServiceA**: ServiceB's `/api/values-from-a` endpoint queries ServiceA's `/api/values` to get static data
 
-Ambos servicios mantienen sus propias responsabilidades:
-- **ServiceA**: Proporciona datos estáticos y actúa como cliente de ServiceB
-- **ServiceB**: Maneja la persistencia en MongoDB y actúa como cliente de ServiceA
+Both services maintain their own responsibilities:
+- **ServiceA**: Provides static data and acts as a ServiceB client
+- **ServiceB**: Handles MongoDB persistence and acts as a ServiceA client
 
-Esta arquitectura permite patrones de comunicación más complejos y realistas en un entorno de microservicios, donde los servicios pueden actuar tanto como proveedores como consumidores de APIs.
+This architecture enables more complex and realistic communication patterns in a microservices environment, where services can act as both API providers and consumers.
 
-## Acceso a Jaeger UI
+## Jaeger UI Access
 
-Para acceder a la interfaz de Jaeger y visualizar las trazas:
+To access Jaeger interface and visualize traces:
 
 ```bash
-# Port-forward para acceder a Jaeger UI desde localhost
+# Port-forward to access Jaeger UI from localhost
 kubectl port-forward -n observability svc/jaeger-query 16686:16686
 
-# Abrir en el navegador
+# Open in browser
 open http://localhost:16686
 ```
 
-En Jaeger UI podrás ver:
-- 🔍 **Trazas distribuidas** entre ServiceA ↔ ServiceB
-- 📊 **Métricas de latencia** de las llamadas HTTP
-- 🌐 **Mapas de servicios** mostrando la comunicación entre microservicios
-- 🐛 **Debugging** de requests y errores en tiempo real
+In Jaeger UI you can see:
+- 🔍 **Distributed traces** between ServiceA ↔ ServiceB
+- 📊 **Latency metrics** from HTTP calls
+- 🌐 **Service maps** showing microservices communication
+- 🐛 **Real-time debugging** of requests and errors
 
 ## Troubleshooting
 
 ### "exec format error"
-- **Causa**: Incompatibilidad de arquitectura entre imagen y nodo
-- **Solución**: Reconstruir con `docker buildx --platform linux/amd64`
+- **Cause**: Architecture incompatibility between image and node
+- **Solution**: Rebuild with `docker buildx --platform linux/amd64`
 
-### Imágenes no se actualizan en Kubernetes
-- **Configuración**: Los manifiestos usan `imagePullPolicy: Always`
-- **Comportamiento**: Kubernetes siempre descarga la imagen más reciente del registry
-- **Ventaja**: Los cambios se reflejan inmediatamente sin cambiar tags
-- **Para forzar actualización**: `kubectl rollout restart deployment/servicea -n microservices-demo`
+### Images not updating in Kubernetes
+- **Configuration**: Manifests use `imagePullPolicy: Always`
+- **Behavior**: Kubernetes always downloads the latest image from registry
+- **Advantage**: Changes are reflected immediately without changing tags
+- **To force update**: `kubectl rollout restart deployment/servicea -n microservices-demo`
 
-### Pods en estado CrashLoopBackOff
-- **Verificar logs**: `kubectl logs -n microservices-demo deployment/servicea`
-- **Verificar recursos**: `kubectl describe pod -n microservices-demo`
+### Pods in CrashLoopBackOff state
+- **Check logs**: `kubectl logs -n microservices-demo deployment/servicea`
+- **Check resources**: `kubectl describe pod -n microservices-demo`
 
-### Jaeger no recibe trazas
-- **Verificar conectividad**: Endpoint debe ser `jaeger-collector.observability.svc.cluster.local:14268`
-- **Verificar logs de servicios**: Buscar errores de OpenTelemetry
+### Jaeger not receiving traces
+- **Check connectivity**: Endpoint should be `jaeger-collector.observability.svc.cluster.local:14268`
+- **Check service logs**: Look for OpenTelemetry errors
 
 ### MongoDB connection failed
-- **Verificar que MongoDB esté ejecutándose**: `kubectl get pods -n microservices-demo`
-- **Verificar URL**: Debe ser `mongodb://mongo.microservices-demo.svc.cluster.local:27017` 
+- **Check MongoDB is running**: `kubectl get pods -n microservices-demo`
+- **Check URL**: Should be `mongodb://mongo.microservices-demo.svc.cluster.local:27017` 
