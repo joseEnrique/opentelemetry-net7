@@ -1,31 +1,13 @@
 using MongoDB.Driver;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 using ServiceB.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Variables de entorno
-var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "ServiceB";
-var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4318";
 var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*";
 var serviceAUrl = Environment.GetEnvironmentVariable("SERVICEA_URL") ?? "http://localhost:5000";
 var mongoConnection = Environment.GetEnvironmentVariable("MONGO_CONNECTION") ?? "mongodb://localhost:27017";
 var mongoDatabase = Environment.GetEnvironmentVariable("MONGO_DATABASE") ?? "testdb";
-
-// Configurar OpenTelemetry
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracerProviderBuilder =>
-        tracerProviderBuilder
-            .AddSource(serviceName)
-            .SetResourceBuilder(ResourceBuilder.CreateDefault()
-                .AddService(serviceName: serviceName, serviceVersion: "1.0.0"))
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddOtlpExporter(otlpOptions =>
-            {
-                otlpOptions.Endpoint = new Uri(otlpEndpoint);
-            }));
 
 // Configurar CORS
 builder.Services.AddCors(options =>
@@ -64,7 +46,7 @@ var app = builder.Build();
 app.UseCors();
 
 // Health check endpoint
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = serviceName }));
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "ServiceB" }));
 
 // Endpoint que consulta ServiceA
 app.MapGet("/api/values-from-a", async (HttpClient httpClient) =>

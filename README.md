@@ -1,6 +1,6 @@
-# .NET 7 Microservices with OpenTelemetry and MongoDB
+# .NET 8 Microservices with OpenTelemetry and MongoDB
 
-This project contains a complete .NET 7 microservices scenario with OpenTelemetry instrumentation and MongoDB database.
+This project contains a complete .NET 8 microservices scenario with OpenTelemetry instrumentation and MongoDB database.
 
 ## Project Structure
 
@@ -194,7 +194,7 @@ DOCKER_REGISTRY=your-registry.com DOCKER_TAG=v1.0.0 make docker-buildx
 ✅ **MongoDB**: Integration with MongoDB.Driver  
 ✅ **Docker**: Optimized multi-stage images with **multi-platform** support  
 ✅ **Kubernetes**: Deployments with 3 replicas, Services and Ingress  
-✅ **Minimal APIs**: Modern implementation with .NET 7  
+✅ **Minimal APIs**: Modern implementation with .NET 8  
 ✅ **Makefiles**: Complete automation for development and deployment  
 
 ## Local Testing

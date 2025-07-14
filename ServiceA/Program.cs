@@ -1,27 +1,9 @@
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Variables de entorno
-var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "ServiceA";
-var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4318";
+//var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "ServiceA";
 var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "*";
 var serviceBUrl = Environment.GetEnvironmentVariable("SERVICEB_URL") ?? "http://localhost:5001";
-
-builder.Services.AddOpenTelemetry()
-// Configurar OpenTelemetry
-    .WithTracing(tracerProviderBuilder =>
-        tracerProviderBuilder
-            .AddSource(serviceName)
-            .SetResourceBuilder(ResourceBuilder.CreateDefault()
-                .AddService(serviceName: serviceName, serviceVersion: "1.0.0"))
-            .AddAspNetCoreInstrumentation()
-            .AddHttpClientInstrumentation()
-            .AddOtlpExporter(otlpOptions =>
-            {
-                otlpOptions.Endpoint = new Uri(otlpEndpoint);
-            }));
 
 // Configurar CORS
 builder.Services.AddCors(options =>
@@ -52,7 +34,7 @@ var app = builder.Build();
 app.UseCors();
 
 // Health check endpoint
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = serviceName }));
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "ServiceA" }));
 
 // Endpoint principal
 app.MapGet("/api/values", () =>
