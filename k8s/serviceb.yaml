@@ -14,6 +14,8 @@ spec:
     metadata:
       labels:
         app: serviceb
+      annotations:
+        instrumentation.opentelemetry.io/inject-dotnet: "demo-instrumentation"
     spec:
       containers:
       - name: serviceb
@@ -33,7 +35,7 @@ spec:
         - name: SERVICEA_URL
           value: "http://servicea.microservices-demo.svc.cluster.local"
         - name: MONGO_CONNECTION
-          value: "mongodb://mongo.microservices-demo.svc.cluster.local:27017"
+          value: "mongodb://admin:password@mongo:27017"
         - name: MONGO_DATABASE
           value: "testdb"
         readinessProbe:

@@ -42,6 +42,9 @@ builder.Services.AddSingleton<IMongoCollection<Item>>(serviceProvider =>
 
 var app = builder.Build();
 
+// Seed test data on startup
+await SeedTestData(app.Services);
+
 // Configurar pipeline
 app.UseCors();
 
@@ -78,4 +81,34 @@ app.MapGet("/api/items", async (IMongoCollection<Item> collection) =>
     }
 });
 
-app.Run(); 
+app.Run();
+
+async Task SeedTestData(IServiceProvider services)
+{
+    try
+    {
+        var collection = services.GetRequiredService<IMongoCollection<Item>>();
+        
+        // Delete all existing items
+        await collection.DeleteManyAsync(_ => true);
+        
+        // Insert test data
+        var testItems = new List<Item>
+        {
+            new Item { Name = "Test Item 1" },
+            new Item { Name = "Test Item 2" },
+            new Item { Name = "Test Item 3" },
+            new Item { Name = "Sample Product A" },
+            new Item { Name = "Sample Product B" },
+        };
+        
+        await collection.InsertManyAsync(testItems);
+        
+        Console.WriteLine($"Successfully seeded {testItems.Count} test items to MongoDB");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error seeding test data: {ex.Message}");
+        // Continue startup even if seeding fails
+    }
+} 
